@@ -26,7 +26,9 @@ library("stringr")
 wiki<-read_html("https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population_(United_Nations)")%>%
   html_elements("table")%>%
   html_table()
-contries<-web[[1]]
+contries<-web[[1]]%>%rename("Country" = 'Country or territory', "Population" = `Population(1 July 2023)`,
+         "region" = "UN continentalregion[1]",
+         "subregion" = "UN statisticalsubregion[1]")
 
 global_inflation<-read_html("https://globalstats.info/economy/inflation/")%>%
   html_elements("table")%>%
@@ -36,6 +38,31 @@ inflation<-global_stats[[1]]
 global_GDP<-read_html("https://globalstats.info/economy/richest-countries/")%>%
   html_elements("table")%>%
   html_table()
-GDP<-global_GDP[[1]]
+GDP<-global_GDP[[1]]%>% rename("Country" = "Country/Region")
+
+##################
+##cleaning
+##################
+
+
+contries<- contries%>%
+  select("Country", "Population", "Change(%)", "region", "subregion")%>%
+  mutate(Country = str_extract(string = Country, pattern ="[^\\[]+"))
+
+GDP<-GDP%>%
+  mutate(Country = str_replace(Country, "Congo, D.+", replacement = "DRC"))%>%
+  mutate(Country = str_extract(string = Country, pattern ="[^\\(|,|*]+"))%>%
+  mutate(Country = str_replace(Country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
+  str_trim("Country")
+
+inflation<-inflation%>%
+  mutate(Country = str_replace(Country, "Congo, Dem. Rep.", replacement = "DRC"))%>%
+  mutate(Country = str_extract(string = Country, pattern ="[^\\(|,|*]+"))%>%
+  mutate(Country = str_replace(Country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
+  mutate(Country = str_trim(Country))
+
+##joining data
+clean<-inner_join(inflation, GDP, by = "Country")
+clean<- inner_join(clean, contries, by = "Country")
 ```
 
