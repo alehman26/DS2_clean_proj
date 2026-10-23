@@ -1,0 +1,41 @@
+---
+title: "DS2_clean_proj"
+author: "Austin Lehman"
+format: html
+editor: visual
+---
+
+idea: use data from https://globalstats.info/economy and wikipedia to build a data set contating stats about country's economy 
+Plan:
+- from wiki, download a table liting every contry and there populations, 
+- from above link, retrive data about inflation, CoL, GDP, income 
+- of the 5 criteria reqiured for messy data we will have(multiple retrivals, mssnng data (not all countys listed, naming convetions wikis name will not match other cites name)
+
+Goal: build a model to model living standered of worald countries 
+  - find a living standered data to compare (test model)
+
+- 
+```{r}
+#install.packages("tidymodels")
+library("tidymodels")
+#install.packages("rvest")
+library("rvest")
+library("stringr")
+
+#read html for wiki data 
+wiki<-read_html("https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population_(United_Nations)")%>%
+  html_elements("table")%>%
+  html_table()
+contries<-web[[1]]
+
+global_inflation<-read_html("https://globalstats.info/economy/inflation/")%>%
+  html_elements("table")%>%
+  html_table()
+inflation<-global_stats[[1]]
+
+global_GDP<-read_html("https://globalstats.info/economy/richest-countries/")%>%
+  html_elements("table")%>%
+  html_table()
+GDP<-global_GDP[[1]]
+```
+
