@@ -8,7 +8,7 @@ editor: visual
 idea: use data from https://globalstats.info/economy and wikipedia to build a data set contating stats about country's economy 
 Plan:
 - from wiki, download a table liting every contry and there populations, 
-- from above link, retrive data about inflation, CoL, GDP, income 
+- from above link, retrive data about inflation, CoL, GDP_capita, income 
 - of the 5 criteria reqiured for messy data we will have(multiple retrivals, mssnng data (not all countys listed, naming convetions wikis name will not match other cites name)
 
 Goal: build a model to model living standered of worald countries 
@@ -36,10 +36,10 @@ global_inflation<-read_html("https://globalstats.info/economy/inflation/")%>%
   html_table()
 inflation_df<-global_inflation[[1]]
 
-global_GDP<-read_html("https://globalstats.info/economy/richest-countries/")%>%
+global_GDP_capita<-read_html("https://globalstats.info/economy/richest-countries/")%>%
   html_elements("table")%>%
   html_table()
-GDP_df<-global_GDP[[1]]%>% rename("Country" = "Country/Region")
+GDP_capita_df<-global_GDP_capita[[1]]%>% rename("Country" = "Country/Region")
 
 ##################
 ##cleaning
@@ -48,9 +48,13 @@ GDP_df<-global_GDP[[1]]%>% rename("Country" = "Country/Region")
 
 contries_df<- contries_df%>%
   select("Country", "Population", "Change(%)", "region", "subregion")%>%
-  mutate(Country = str_extract(string = Country, pattern ="[^\\[]+"))
+  mutate(Country = str_extract(string = Country, pattern ="[^\\[]+"))%>%
+  mutate(region = if_else(subregion == "South America", subregion, region))%>%
+  mutate(region = if_else(subregion == "Caribbean", "North America", region))%>%
+  mutate(region = if_else(subregion == "Central America", "North America", region))%>%
+  mutate(region = if_else(subregion == "Northern America", "North America", region))
 
-GDP_df<-GDP_df%>%
+GDP_capita_df<-GDP_capita_df%>%
   mutate(Country = str_replace(Country, "Congo, D.+", replacement = "DRC"))%>%
   mutate(Country = str_extract(string = Country, pattern ="[^\\(|,|*]+"))%>%
   mutate(Country = str_replace(Country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
@@ -63,9 +67,22 @@ inflation_df<-inflation_df%>%
   mutate(Country = str_trim(Country))
 
 ##joining data
-clean_countries<-inner_join(inflation_df, GDP_df, by = "Country")%>%
+joined_countries<-inner_join(inflation_df, GDP_capita_df, by = "Country")%>%
   inner_join(contries_df, by = "Country")%>%
-  rename("inflation" = "Inflation Rate (%)", "GDP" = "GDP per capita (USD, PPP)", "change_pop" = "Change(%)")%>%
-  select(Country, inflation, GDP, Population, change_pop, region, subregion)
+  rename("inflation" = "Inflation Rate (%)", "GDP_capita" = "GDP per capita (USD, PPP)", "change_pop" = "Change(%)")%>%
+  select(Country, inflation, GDP_capita, Population, change_pop, region, subregion)
+
+##renaming columns and cleaning column values
+clean_countries<-joined_countries%>%
+  mutate(inflation = as.numeric(str_extract(inflation, "\\d+")))%>%
+  mutate(GDP_capita = as.numeric(str_extract(GDP_capita, "\\d+")))%>%
+  mutate(Population = as.numeric(str_extract(Population, "\\d+")))%>%
+  mutate(change_pop = as.numeric(str_extract(change_pop, "\\d+")))
+
+##ggplot example
+clean_countries%>%group_by(region)%>%
+  summarise(inf_prop = mean(inflation))%>%
+ggplot(aes(x = region, y = inf_prop))+
+  geom_col()
 ```
 
