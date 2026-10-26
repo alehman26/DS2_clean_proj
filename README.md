@@ -7,9 +7,9 @@ Once the data frames were created I renamed the columns so they would be easier 
 
 The Country column is the key to join the data sets so I cleaned the names in this column for each data set.
 
-The Americas region was split into two regions, North and South America as combining two continents into one region did not seem accurate
+The Americas region was split into two regions, North and South America as combining two continents into one region did not seem accurate.
 
-the Caribbean and Central America are added to North America, the subregions were not changed so North and South America are both a region and subregion.
+The Caribbean and Central America are added to North America, the subregions were not changed so North and South America are both a region and subregion.
 
 Then I used inner join to join the data so only countries that appeared in each data set would be in the joined data set.
 
@@ -17,6 +17,6 @@ This ensured that there are no missing values, providing a nice data set for vis
 
 The column names in the joined data set are renamed for simplicity and only the necessary columns are selected.
 
-finally the data in each column is set to its respective data type (numeric or character).
+Finally the data in each column is set to its respective data type (numeric or character).
 
 
