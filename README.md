@@ -20,3 +20,21 @@ The column names in the joined data set are renamed for simplicity and only the 
 Finally the data in each column is set to its respective data type (numeric or character).
 
 
+
+clean_countries variable description
+
+country - Name of the country 
+
+inflation - The annual percentage change in the Consumer Price Index in 2024 
+
+gdp_capita - 2024 GDP per capita, adjusted for purchasing-power difference
+
+pop - The 2023 population in millions from each country as of 2023, sourced form the UN 
+
+per_chg_pop - The percent change in population from 2022 to 2023
+
+region - The continent that contains each nation
+
+subregion - UN defined subregion assigned to each nation
+
+

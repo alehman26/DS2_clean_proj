@@ -5,16 +5,22 @@ format: html
 editor: visual
 ---
 
-idea: use data from https://globalstats.info/economy and wikipedia to build a data set contating stats about country's economy 
-Plan:
-- from wiki, download a table liting every contry and there populations, 
-- from above link, retrive data about inflation, CoL, GDP_capita, income 
-- of the 5 criteria reqiured for messy data we will have(multiple retrivals, mssnng data (not all countys listed, naming convetions wikis name will not match other cites name)
+clean_countries variable description
 
-Goal: build a model to model living standered of worald countries 
-  - find a living standered data to compare (test model)
+country - Name of the country 
 
-- 
+inflation - The annual percentage change in the Consumer Price Index in 2024 
+
+gdp_capita - 2024 GDP per capita, adjusted for purchasing-power difference
+
+pop - The 2023 population in millions from each country as of 2023, sourced form the UN 
+
+per_chg_pop - The percent change in population from 2022 to 2023
+
+region - The continent that contains each nation
+
+subregion - UN defined subregion assigned to each nation
+
 ```{r}
 #install.packages("tidymodels")
 library("tidymodels")
@@ -22,62 +28,65 @@ library("tidymodels")
 library("rvest")
 library("stringr")
 
-#read html for wiki data 
+##read html for wiki data 
 wiki<-read_html("https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population_(United_Nations)")%>%
   html_elements("table")%>%
   html_table()
 
-contries_df<-wiki[[1]]%>%rename("Country" = 'Country or territory', "Population" = `Population(1 July 2023)`,
-         "region" = "UN continentalregion[1]",
-         "subregion" = "UN statisticalsubregion[1]")
+contries_df<-wiki[[1]]%>%rename("country" = 'Country or territory', 
+                                "pop_2023" = `Population(1 July 2023)`,
+                                "region" = "UN continentalregion[1]",
+                                "subregion" = "UN statisticalsubregion[1]",
+                                "per_chg_pop" = `Change(%)`)
 
 global_inflation<-read_html("https://globalstats.info/economy/inflation/")%>%
   html_elements("table")%>%
   html_table()
-inflation_df<-global_inflation[[1]]
+inflation_df<-global_inflation[[1]]%>%
+  rename("country" = "Country", "inflation" = "Inflation Rate (%)")
 
 global_GDP_capita<-read_html("https://globalstats.info/economy/richest-countries/")%>%
   html_elements("table")%>%
   html_table()
-GDP_capita_df<-global_GDP_capita[[1]]%>% rename("Country" = "Country/Region")
+GDP_capita_df<-global_GDP_capita[[1]]%>% rename("country" = "Country/Region", "gdp_capita" = "GDP per capita (USD, PPP)")
 
 ##################
 ##cleaning
 ##################
 
-
 contries_df<- contries_df%>%
-  select("Country", "Population", "Change(%)", "region", "subregion")%>%
-  mutate(Country = str_extract(string = Country, pattern ="[^\\[]+"))%>%
+  select("country", "pop_2023", "per_chg_pop", "region", "subregion")%>%
+  mutate(Country = str_extract(string = country, pattern ="[^\\[]+"))%>%
   mutate(region = if_else(subregion == "South America", subregion, region))%>%
   mutate(region = if_else(subregion == "Caribbean", "North America", region))%>%
   mutate(region = if_else(subregion == "Central America", "North America", region))%>%
   mutate(region = if_else(subregion == "Northern America", "North America", region))
 
 GDP_capita_df<-GDP_capita_df%>%
-  mutate(Country = str_replace(Country, "Congo, D.+", replacement = "DRC"))%>%
-  mutate(Country = str_extract(string = Country, pattern ="[^\\(|,|*]+"))%>%
-  mutate(Country = str_replace(Country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
-  mutate(Country = str_trim(Country))
+  mutate(country = str_replace(country, "Congo, D.+", replacement = "DRC"))%>%
+  mutate(country = str_extract(string = country, pattern ="[^\\(|,|*]+"))%>%
+  mutate(country = str_replace(country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
+  mutate(country = str_trim(country))
 
 inflation_df<-inflation_df%>%
-  mutate(Country = str_replace(Country, "Congo, Dem. Rep.", replacement = "DRC"))%>%
-  mutate(Country = str_extract(string = Country, pattern ="[^\\(|,|*]+"))%>%
-  mutate(Country = str_replace(Country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
-  mutate(Country = str_trim(Country))
+  mutate(country = str_replace(country, "Congo, Dem. Rep.", replacement = "DRC"))%>%
+  mutate(country = str_extract(string = country, pattern ="[^\\(|,|*]+"))%>%
+  mutate(country = str_replace(country, "Hong Kong SAR", replacement = "Hong Kong"))%>%
+  mutate(country = str_trim(country))
 
 ##joining data
-joined_countries<-inner_join(inflation_df, GDP_capita_df, by = "Country")%>%
-  inner_join(contries_df, by = "Country")%>%
-  rename("inflation" = "Inflation Rate (%)", "GDP_capita" = "GDP per capita (USD, PPP)", "change_pop" = "Change(%)")%>%
-  select(Country, inflation, GDP_capita, Population, change_pop, region, subregion)
+joined_countries<-inner_join(inflation_df, GDP_capita_df, by = "country")%>%
+  inner_join(contries_df, by = "country")%>%
+ 
+  select(country, inflation, gdp_capita, pop_2023, per_chg_pop, region, subregion)
 
 ##renaming columns and cleaning column values
 clean_countries<-joined_countries%>%
   mutate(inflation = as.numeric(str_extract(inflation, "\\d+")))%>%
-  mutate(GDP_capita = as.numeric(str_extract(GDP_capita, "\\d+")))%>%
-  mutate(Population = as.numeric(str_extract(Population, "\\d+")))%>%
-  mutate(change_pop = as.numeric(str_extract(change_pop, "\\d+")))
+  mutate(gdp_capita = as.numeric(str_extract(gdp_capita, "\\d+")))%>%
+  mutate(pop_2023 = as.numeric(str_remove_all(pop_2023, ",")))%>%
+  mutate(pop_2023 = round(x = 0.000001*pop_2023, 3))%>%
+  mutate(per_chg_pop = as.numeric(str_extract(per_chg_pop, "\\d+")))
 
 ##ggplot example
 clean_countries%>%group_by(region)%>%
@@ -85,4 +94,3 @@ clean_countries%>%group_by(region)%>%
 ggplot(aes(x = region, y = inf_prop))+
   geom_col()
 ```
-
