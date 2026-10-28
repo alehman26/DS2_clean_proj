@@ -88,6 +88,9 @@ clean_countries<-joined_countries%>%
   mutate(pop_2023 = round(x = 0.000001*pop_2023, 3))%>%
   mutate(per_chg_pop = as.numeric(str_extract(per_chg_pop, "\\d+")))
 
+##download clean file
+write.csv(clean_countries, "/cloud/project/clean_countries.csv")
+
 ##ggplot example
 clean_countries%>%group_by(region)%>%
   summarise(inf_prop = mean(inflation))%>%
