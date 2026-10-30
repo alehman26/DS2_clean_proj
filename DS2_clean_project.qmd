@@ -1,7 +1,7 @@
 ---
 title: "DS2_clean_proj"
 author: "Austin Lehman"
-format: html
+format: pdf
 editor: visual
 ---
 
